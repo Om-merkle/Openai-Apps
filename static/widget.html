@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Weather Info Widget</title>
+    <style>
+      /* These styles keep the example widget readable inside a narrow ChatGPT panel. */
+      :root {
+        color-scheme: light;
+        --bg: linear-gradient(180deg, #f2f8ff 0%, #ffffff 100%);
+        --card: rgba(255, 255, 255, 0.94);
+        --ink: #10233f;
+        --muted: #4f6688;
+        --accent: #1380a1;
+        --border: rgba(16, 35, 63, 0.12);
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+      }
+
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 20px;
+        box-shadow: 0 18px 40px rgba(8, 30, 56, 0.08);
+      }
+
+      h1,
+      h2,
+      p {
+        margin-top: 0;
+      }
+
+      .hero {
+        display: grid;
+        gap: 10px;
+      }
+
+      .temp {
+        font-size: 42px;
+        font-weight: 700;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .forecast {
+        display: grid;
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      .forecast-day {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px;
+      }
+
+      code {
+        background: rgba(19, 128, 161, 0.08);
+        padding: 2px 6px;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="card">
+        <div id="app"></div>
+      </section>
+    </main>
+    <script>
+      // This helper renders a useful fallback if the page is opened directly in a browser.
+      const fallbackData = {
+        summary: "Run the get_weather_info tool from ChatGPT to populate this widget.",
+        location: { name: "Weather Info", admin1: "Demo", country: "Local Preview" },
+        current: { temperature: 24, unit: "celsius", weather_code: 1, wind_speed: 9 },
+        forecast: [
+          { date: "Day 1", temperature_min: 20, temperature_max: 28, precipitation_probability_max: 10 },
+          { date: "Day 2", temperature_min: 19, temperature_max: 27, precipitation_probability_max: 20 },
+          { date: "Day 3", temperature_min: 18, temperature_max: 25, precipitation_probability_max: 35 }
+        ]
+      };
+
+      // ChatGPT Apps inject tool output into the page when a widget is wired to a tool.
+      const toolPayload =
+        window.openai?.toolOutput ??
+        window.openai?.toolOutputs?.get_weather_info ??
+        fallbackData;
+
+      const data = toolPayload?.structuredContent ?? toolPayload ?? fallbackData;
+      const unitLabel = data.current?.unit === "fahrenheit" ? "F" : "C";
+
+      // Keeping the rendering logic very plain makes it easier for new builders to modify later.
+      const forecastMarkup = (data.forecast || [])
+        .map(
+          (day) => `
+            <article class="forecast-day">
+              <strong>${day.date}</strong>
+              <p class="muted">${day.temperature_min}&deg;${unitLabel} to ${day.temperature_max}&deg;${unitLabel}</p>
+              <p class="muted">Rain chance: ${day.precipitation_probability_max ?? "n/a"}%</p>
+            </article>
+          `
+        )
+        .join("");
+
+      document.getElementById("app").innerHTML = `
+        <div class="hero">
+          <p class="muted">Weather Info widget</p>
+          <h1>${data.location?.name ?? "Weather Info"}</h1>
+          <p class="muted">${[data.location?.admin1, data.location?.country].filter(Boolean).join(", ")}</p>
+          <div class="temp">${data.current?.temperature ?? "--"}&deg;${unitLabel}</div>
+          <p>${data.summary}</p>
+          <p class="muted">Preview route: <code>/widget</code></p>
+        </div>
+        <div class="forecast">
+          <h2>Forecast</h2>
+          ${forecastMarkup}
+        </div>
+      `;
+    </script>
+  </body>
+</html>
