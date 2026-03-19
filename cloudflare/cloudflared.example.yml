@@ -1,0 +1,11 @@
+# This example Cloudflare Tunnel file publishes the local FastAPI app over HTTPS.
+tunnel: weather-info
+credentials-file: C:\Users\your-user\.cloudflared\weather-info.json
+
+ingress:
+  # Route the public hostname to the local FastAPI app.
+  - hostname: weather-info.your-domain.example
+    service: http://127.0.0.1:8000
+
+  # Return a 404 for anything that does not match the hostname above.
+  - service: http_status:404

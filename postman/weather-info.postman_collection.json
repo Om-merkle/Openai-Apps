@@ -1,0 +1,111 @@
+{
+  "info": {
+    "name": "Weather Info App",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Root",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "http://127.0.0.1:8000/"
+      }
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "http://127.0.0.1:8000/healthz"
+      }
+    },
+    {
+      "name": "Connections",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "http://127.0.0.1:8000/connections"
+      }
+    },
+    {
+      "name": "Integration Guide",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "http://127.0.0.1:8000/integration-guide"
+      }
+    },
+    {
+      "name": "Widget",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "http://127.0.0.1:8000/widget"
+      }
+    },
+    {
+      "name": "MCP Initialize",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"initialize\",\n  \"params\": {\n    \"protocolVersion\": \"2025-03-26\",\n    \"capabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"Postman\",\n      \"version\": \"1.0.0\"\n    }\n  }\n}"
+        },
+        "url": "http://127.0.0.1:8000/mcp"
+      }
+    },
+    {
+      "name": "MCP List Tools",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"tools/list\",\n  \"params\": {}\n}"
+        },
+        "url": "http://127.0.0.1:8000/mcp"
+      }
+    },
+    {
+      "name": "MCP Call Weather Tool",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 3,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"get_weather_info\",\n    \"arguments\": {\n      \"location\": \"Hyderabad\",\n      \"days\": 3,\n      \"unit\": \"celsius\"\n    }\n  }\n}"
+        },
+        "url": "http://127.0.0.1:8000/mcp"
+      }
+    }
+  ]
+}

@@ -22,8 +22,13 @@ class Settings:
     )
     forecast_days_limit: int = int(os.getenv("FORECAST_DAYS_LIMIT", "5"))
     connect_base_url: str = os.getenv("PUBLIC_BASE_URL", "")
+    cloudflare_tunnel_name: str = os.getenv("CLOUDFLARE_TUNNEL_NAME", "weather-info")
+    cloudflare_tunnel_hostname: str = os.getenv("CLOUDFLARE_TUNNEL_HOSTNAME", "")
     weather_api_base_url: str = os.getenv("WEATHER_API_BASE_URL", "https://api.open-meteo.com/v1")
     geocoding_api_base_url: str = os.getenv("GEOCODING_API_BASE_URL", "https://geocoding-api.open-meteo.com/v1")
+    openai_apps_docs_url: str = os.getenv("OPENAI_APPS_DOCS_URL", "https://developers.openai.com/apps-sdk/")
+    openai_apps_deploy_url: str = os.getenv("OPENAI_APPS_DEPLOY_URL", "https://developers.openai.com/apps-sdk/deploy")
+    openai_platform_apps_url: str = os.getenv("OPENAI_PLATFORM_APPS_URL", "https://platform.openai.com")
 
     @property
     def mcp_url(self) -> str:
@@ -44,6 +49,14 @@ class Settings:
     def connections_url(self) -> str:
         """Helpful endpoint that lists every important connection."""
         return f"{self.connect_base_url.rstrip('/')}/connections"
+
+    @property
+    def cloudflare_public_url(self) -> str:
+        """Public Cloudflare hostname when the user configures one."""
+        if not self.cloudflare_tunnel_hostname.strip():
+            return ""
+
+        return f"https://{self.cloudflare_tunnel_hostname.strip()}"
 
 
 settings = Settings()
