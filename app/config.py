@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from urllib.parse import urlsplit
 
 
 @dataclass(slots=True)
@@ -49,6 +50,48 @@ class Settings:
     def connections_url(self) -> str:
         """Helpful endpoint that lists every important connection."""
         return f"{self.connect_base_url.rstrip('/')}/connections"
+
+    @property
+    def mcp_allowed_hosts(self) -> list[str]:
+        """Host headers accepted by the MCP DNS-rebinding protection."""
+        allowed_hosts = [
+            "127.0.0.1",
+            "127.0.0.1:*",
+            "localhost",
+            "localhost:*",
+            "[::1]",
+            "[::1]:*",
+        ]
+
+        configured_url = self.connect_base_url.strip()
+        if configured_url:
+            parsed_url = urlsplit(configured_url)
+            if parsed_url.hostname:
+                hostname = parsed_url.hostname
+                if ":" in hostname:
+                    hostname = f"[{hostname}]"
+
+                allowed_hosts.extend([hostname, f"{hostname}:*"])
+
+        return list(dict.fromkeys(allowed_hosts))
+
+    @property
+    def mcp_allowed_origins(self) -> list[str]:
+        """Browser origins accepted by the MCP DNS-rebinding protection."""
+        allowed_origins = [
+            "http://127.0.0.1:*",
+            "http://localhost:*",
+            "http://[::1]:*",
+            *(origin.rstrip("/") for origin in self.allowed_origins),
+        ]
+
+        configured_url = self.connect_base_url.strip()
+        if configured_url:
+            parsed_url = urlsplit(configured_url)
+            if parsed_url.scheme and parsed_url.netloc:
+                allowed_origins.append(f"{parsed_url.scheme}://{parsed_url.netloc}")
+
+        return list(dict.fromkeys(allowed_origins))
 
     @property
     def cloudflare_public_url(self) -> str:

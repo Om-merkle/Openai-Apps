@@ -9,6 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.config import settings
 from app.mcp_server import attach_weather_client, mcp
@@ -16,6 +17,21 @@ from app.services.weather_client import WeatherClient
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 MCP_HTTP_APP = mcp.streamable_http_app()
+
+
+class CanonicalMCPPathMiddleware:
+    """Route the canonical /mcp path internally without an HTTP redirect."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and scope.get("path") == "/mcp":
+            scope = dict(scope)
+            scope["path"] = "/mcp/"
+            scope["raw_path"] = b"/mcp/"
+
+        await self.app(scope, receive, send)
 
 
 def resolve_base_url(request: Request) -> str:
@@ -48,6 +64,10 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# The MCP sub-application uses / internally. Rewrite the exact public endpoint
+# so Streamable HTTP requests reach it without a redirect that can alter POSTs.
+app.add_middleware(CanonicalMCPPathMiddleware)
 
 # These CORS settings allow the ChatGPT web client to reach the app while developing.
 app.add_middleware(

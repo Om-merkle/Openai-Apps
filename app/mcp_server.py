@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Literal
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import CallToolResult, TextContent
 
 from app.config import settings
@@ -19,6 +20,11 @@ mcp = FastMCP(
     instructions=(
         "Use the weather tool whenever a user asks for current weather or a short forecast "
         "for a city, state, or country."
+    ),
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=settings.mcp_allowed_hosts,
+        allowed_origins=settings.mcp_allowed_origins,
     ),
 )
 
