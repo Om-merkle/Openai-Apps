@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: weather-info
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
+    autoDeployTrigger: commit
+    envVars:
+      - key: APP_NAME
+        value: Weather Info
+      - key: ALLOWED_ORIGINS
+        value: https://chatgpt.com,https://chat.openai.com
+      - key: FORECAST_DAYS_LIMIT
+        value: "5"

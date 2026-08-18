@@ -143,8 +143,8 @@ async def connections(request: Request) -> dict[str, object]:
                 "purpose": "Platform entry point for broader OpenAI project management and integrations.",
             },
             {
-                "name": "Heroku application",
-                "url": settings.connect_base_url or "Set PUBLIC_BASE_URL to the Heroku app URL",
+                "name": "Render web service",
+                "url": base_url,
                 "purpose": "Primary public HTTPS host for the app and its MCP endpoint.",
             },
             {
@@ -158,11 +158,11 @@ async def connections(request: Request) -> dict[str, object]:
 
 @app.get("/integration-guide", tags=["meta"])
 async def integration_guide(request: Request) -> dict[str, object]:
-    """Return a machine-readable setup guide covering local, Heroku, and ChatGPT steps."""
+    """Return a machine-readable setup guide covering local, Render, and ChatGPT steps."""
     base_url = resolve_base_url(request)
     return {
         "app_name": settings.app_name,
-        "summary": "Step-by-step integration guide for local development, Heroku deployment, and ChatGPT connection.",
+        "summary": "Step-by-step integration guide for local development, Render deployment, and ChatGPT connection.",
         "steps": [
             {
                 "step": 1,
@@ -183,28 +183,24 @@ async def integration_guide(request: Request) -> dict[str, object]:
             },
             {
                 "step": 3,
-                "title": "Deploy the app to Heroku",
-                "details": "Create a Heroku app and deploy the repository. The Procfile binds Uvicorn to Heroku's PORT.",
-                "commands": [
-                    "heroku login",
-                    "heroku create YOUR_HEROKU_APP",
-                    "git push heroku main",
-                ],
+                "title": "Deploy the app to Render",
+                "details": "Create a Python web service from the GitHub repository or deploy the included render.yaml Blueprint.",
+                "build_command": "pip install -r requirements.txt",
+                "start_command": "uvicorn app.main:app --host 0.0.0.0 --port $PORT",
+                "health_check_path": "/healthz",
             },
             {
                 "step": 4,
                 "title": "Configure the public URL",
-                "details": "Set PUBLIC_BASE_URL to the exact HTTPS URL shown by Heroku, then redeploy or restart the app.",
-                "command": "heroku config:set PUBLIC_BASE_URL=https://YOUR_HEROKU_APP.herokuapp.com -a YOUR_HEROKU_APP",
-                "public_url": settings.connect_base_url or "https://YOUR_HEROKU_APP.herokuapp.com",
+                "details": "Set PUBLIC_BASE_URL in the Render environment to the exact onrender.com service origin, then redeploy.",
+                "environment_variable": "PUBLIC_BASE_URL=https://YOUR_RENDER_SERVICE.onrender.com",
+                "public_url": base_url,
             },
             {
                 "step": 5,
                 "title": "Connect ChatGPT",
                 "details": "Use the public HTTPS MCP endpoint in the ChatGPT connector flow.",
-                "chatgpt_connector_url": f"{settings.connect_base_url.rstrip('/')}/mcp"
-                if settings.connect_base_url
-                else "https://YOUR_HEROKU_APP.herokuapp.com/mcp",
+                "chatgpt_connector_url": f"{base_url}/mcp",
             },
             {
                 "step": 6,

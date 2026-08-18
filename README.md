@@ -8,7 +8,7 @@ The application uses:
 - FastMCP from the Python MCP SDK
 - Open-Meteo for geocoding and weather data
 - Pydantic for structured tool results
-- Heroku for the public HTTPS deployment
+- Render for the public HTTPS deployment
 
 No OpenAI API key is required. ChatGPT connects to the public MCP endpoint and invokes the tool; the server itself does not call the OpenAI API.
 
@@ -21,7 +21,7 @@ User prompt in ChatGPT
 ChatGPT MCP connection
         |
         v
-POST https://YOUR_HEROKU_APP.herokuapp.com/mcp
+POST https://YOUR_RENDER_SERVICE.onrender.com/mcp
         |
         v
 FastMCP tool: get_weather_info
@@ -65,9 +65,9 @@ get_weather_info(location: string, days: integer = 3, unit: "celsius" | "fahrenh
 weather_info_app/
 |-- .env.example
 |-- .python-version
-|-- Procfile
 |-- README.md
-|-- heroku-setup.md
+|-- render-setup.md
+|-- render.yaml
 |-- requirements.txt
 |-- app/
 |   |-- config.py
@@ -85,7 +85,7 @@ weather_info_app/
     `-- cloudflared.example.yml
 ```
 
-Heroku is the primary deployment workflow. The Cloudflare files are retained only as an optional alternative.
+Render is the primary deployment workflow. The Cloudflare files are retained only as an optional alternative.
 
 ## Complete execution workflow
 
@@ -250,101 +250,86 @@ Import:
 
 Select the `Weather Info Local` environment, then run the HTTP requests. The `/mcp` requests are JSON-RPC protocol calls; `/mcp` is not a conventional REST endpoint or browser page.
 
-### Phase 3: Deploy to Heroku
+### Phase 3: Deploy to Render
 
-#### Step 10: Install and authenticate the Heroku CLI
+#### Step 10: Push the deployable project to GitHub
 
-Confirm the Heroku CLI and sign in:
-
-```powershell
-heroku --version
-heroku login
-```
-
-#### Step 11: Commit the deployable project
-
-Heroku Git deploys committed files:
+Render deploys from the linked GitHub branch. Commit and push the current files:
 
 ```powershell
 git add .
-git commit -m "Prepare Weather Info for Heroku"
+git commit -m "Configure Weather Info for Render"
+git push origin main
 ```
 
 The repository includes:
 
-- `Procfile`, which starts Uvicorn on Heroku's `$PORT`
+- `render.yaml`, which defines the web-service runtime and commands
 - `.python-version`, which selects Python 3.14
 - `requirements.txt`, which installs application dependencies
 
-#### Step 12: Create the Heroku application
+#### Step 11: Configure the Render web service
 
-Choose a globally unique app name:
+For the existing service, open `Settings` and use these values:
 
-```powershell
-heroku create YOUR_HEROKU_APP
-heroku apps:info -a YOUR_HEROKU_APP
-```
+| Setting | Value |
+| --- | --- |
+| Runtime | `Python 3` |
+| Build command | `pip install -r requirements.txt` |
+| Start command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| Health-check path | `/healthz` |
+| Instance type | `Free` for testing |
 
-Record the exact HTTPS web URL shown by Heroku. The hostname can include an additional generated suffix.
+Do not use `python app/main.py`; direct execution breaks package imports and does not start the ASGI server correctly.
+
+Alternatively, create a Render Blueprint from the repository's `render.yaml`. Do not create a Blueprint if it would unintentionally duplicate an existing manually configured service.
+
+#### Step 12: Deploy the latest commit
+
+In the Render Dashboard:
+
+1. Save the corrected service settings.
+2. Select `Manual Deploy`.
+3. Select `Deploy latest commit`.
+4. Watch the event log until the service reports a successful deployment.
+
+The dependency build already succeeded in the reported deployment, so clearing the build cache is not required for the start-command correction.
 
 #### Step 13: Configure production environment variables
 
-Replace the placeholders with the actual app name and exact public URL:
+After the first successful deployment, copy the exact `onrender.com` service origin. Under the service's `Environment` settings, add:
 
-```powershell
-heroku config:set PUBLIC_BASE_URL=https://YOUR_ACTUAL_HEROKU_HOSTNAME -a YOUR_HEROKU_APP
-heroku config:set APP_NAME="Weather Info" -a YOUR_HEROKU_APP
-heroku config:set ALLOWED_ORIGINS=https://chatgpt.com,https://chat.openai.com -a YOUR_HEROKU_APP
-heroku config:set FORECAST_DAYS_LIMIT=5 -a YOUR_HEROKU_APP
+```text
+PUBLIC_BASE_URL=https://YOUR_RENDER_SERVICE.onrender.com
+APP_NAME=Weather Info
+ALLOWED_ORIGINS=https://chatgpt.com,https://chat.openai.com
+FORECAST_DAYS_LIMIT=5
 ```
 
-Review the configuration without placing credentials in the repository:
+Do not include `/mcp` in `PUBLIC_BASE_URL`. Save the environment settings and redeploy.
 
-```powershell
-heroku config -a YOUR_HEROKU_APP
-```
-
-#### Step 14: Deploy the main branch
-
-```powershell
-git push heroku main
-```
-
-If the current local branch has another name, push it to Heroku's `main` branch:
-
-```powershell
-git push heroku HEAD:main
-```
-
-#### Step 15: Check the web process and logs
-
-```powershell
-heroku ps -a YOUR_HEROKU_APP
-heroku logs --tail -a YOUR_HEROKU_APP
-```
-
-The web process must be `up`. Press `Ctrl+C` to stop following the logs.
+See [render-setup.md](./render-setup.md) for the focused deployment and troubleshooting guide.
 
 ### Phase 4: Verify the public deployment
 
-#### Step 16: Test every public route
+#### Step 14: Test every public route
 
 Set the exact URL in the current PowerShell session:
 
 ```powershell
-$HerokuUrl = "https://YOUR_ACTUAL_HEROKU_HOSTNAME"
-Invoke-RestMethod "$HerokuUrl/healthz"
-Invoke-RestMethod "$HerokuUrl/"
-Invoke-RestMethod "$HerokuUrl/connections"
-Invoke-RestMethod "$HerokuUrl/integration-guide"
+$RenderUrl = "https://YOUR_RENDER_SERVICE.onrender.com"
+Invoke-RestMethod "$RenderUrl/healthz"
+Invoke-RestMethod "$RenderUrl/"
+Invoke-RestMethod "$RenderUrl/connections"
+Invoke-RestMethod "$RenderUrl/integration-guide"
 ```
 
 Open:
 
-- `https://YOUR_ACTUAL_HEROKU_HOSTNAME/docs`
-- `https://YOUR_ACTUAL_HEROKU_HOSTNAME/widget`
+- `https://YOUR_RENDER_SERVICE.onrender.com/docs`
+- `https://YOUR_RENDER_SERVICE.onrender.com/widget`
 
-#### Step 17: Test the production MCP endpoint
+#### Step 15: Test the production MCP endpoint
 
 Restart MCP Inspector if necessary:
 
@@ -355,14 +340,14 @@ npx @modelcontextprotocol/inspector@latest
 Connect with Streamable HTTP using:
 
 ```text
-https://YOUR_ACTUAL_HEROKU_HOSTNAME/mcp
+https://YOUR_RENDER_SERVICE.onrender.com/mcp
 ```
 
-Repeat the `get_weather_info` call from Step 8. Do not proceed to ChatGPT until initialization, tool discovery, and a representative tool call all succeed against Heroku.
+Repeat the `get_weather_info` call from Step 8. Do not proceed to ChatGPT until initialization, tool discovery, and a representative tool call all succeed against Render.
 
 ### Phase 5: Connect the MCP server to ChatGPT
 
-#### Step 18: Enable developer mode
+#### Step 16: Enable developer mode
 
 In ChatGPT:
 
@@ -372,7 +357,7 @@ In ChatGPT:
 
 Developer mode availability can depend on the account and workspace policy.
 
-#### Step 19: Add the public MCP connection
+#### Step 17: Add the public MCP connection
 
 1. Open ChatGPT Plugins.
 2. Select the plus button.
@@ -382,13 +367,13 @@ Developer mode availability can depend on the account and workspace policy.
 6. Enter the full URL, including `/mcp`:
 
 ```text
-https://YOUR_ACTUAL_HEROKU_HOSTNAME/mcp
+https://YOUR_RENDER_SERVICE.onrender.com/mcp
 ```
 
 7. Create the connection.
 8. Confirm that ChatGPT discovers `get_weather_info` and its input schema.
 
-#### Step 20: Run an end-to-end ChatGPT test
+#### Step 18: Run an end-to-end ChatGPT test
 
 Start a new conversation, enable the Weather Info MCP connection from the tools menu, and ask:
 
@@ -420,7 +405,7 @@ For each code or MCP metadata change:
 1. Run and test the application locally.
 2. Test `get_weather_info` with MCP Inspector.
 3. Commit the changes.
-4. Deploy them with `git push heroku main`.
+4. Push them with `git push origin main` and wait for Render's automatic deployment.
 5. Verify `/healthz` and the production `/mcp` endpoint.
 6. Open the connection in ChatGPT Plugins and select `Refresh`.
 7. Start a new conversation and repeat the affected test prompts.
@@ -433,28 +418,30 @@ For each code or MCP metadata change:
 | PowerShell blocks virtual-environment activation | Run `Set-ExecutionPolicy -Scope Process Bypass`. |
 | Local settings are ignored | Start Uvicorn with `--env-file .env`. |
 | `/healthz` fails locally | Check the Uvicorn terminal for import or dependency errors. |
-| Weather calls fail | Confirm the machine or Heroku app can reach both Open-Meteo APIs. |
+| Weather calls fail | Confirm the machine or Render service can reach both Open-Meteo APIs. |
 | `/mcp` looks broken in a browser | Test it with MCP Inspector; it is an MCP protocol endpoint. |
-| Heroku build fails | Review `heroku logs --tail` and confirm the root contains `requirements.txt`, `.python-version`, and `Procfile`. |
-| Heroku web process is down | Run `heroku ps` and inspect startup logs. |
-| Generated links show the wrong host | Set `PUBLIC_BASE_URL` to the exact Heroku HTTPS origin without `/mcp`. |
-| ChatGPT cannot connect | Verify the Heroku `/mcp` URL with MCP Inspector first, then refresh the ChatGPT connection. |
+| Render build fails | Review the Render event log and confirm the repository root contains `requirements.txt`, `.python-version`, and `render.yaml`. |
+| Render reports `No module named 'app'` | Replace `python app/main.py` with the documented Uvicorn start command. |
+| Render cannot detect an open port | Confirm Uvicorn binds to `0.0.0.0` and uses `$PORT`. |
+| Generated links show the wrong host | Set `PUBLIC_BASE_URL` to the exact Render HTTPS origin without `/mcp`. |
+| ChatGPT cannot connect | Verify the Render `/mcp` URL with MCP Inspector first, then refresh the ChatGPT connection. |
 | A location returns no result | Try a more specific value such as `Hyderabad, India`. |
 
 ## Important operational notes
 
-- Keep the Heroku MCP endpoint publicly reachable over HTTPS.
+- Keep the Render MCP endpoint publicly reachable over HTTPS.
 - Do not put `/mcp` inside `PUBLIC_BASE_URL`; the application appends route paths itself.
-- Store production values in Heroku config vars, not `.env` or Git.
+- Store production values in Render environment variables, not `.env` or Git.
 - The service currently has no user authentication because it exposes public weather data only.
 - Open-Meteo availability and outbound network access are required for tool calls.
-- Use Heroku logs to diagnose initialization and tool failures.
+- Free Render services can sleep when inactive, so verify `/healthz` before retrying a timed-out MCP connection.
+- Use Render event logs to diagnose initialization and tool failures.
 
 ## Reference documentation
 
 - [Build an MCP server](https://developers.openai.com/plugins/build/mcp-server)
 - [Connect and test an MCP server in ChatGPT](https://developers.openai.com/plugins/deploy/connect-chatgpt)
-- [Heroku Procfile](https://devcenter.heroku.com/articles/procfile)
-- [Heroku Python runtimes](https://devcenter.heroku.com/articles/python-runtimes)
-- [Deploying to Heroku with Git](https://devcenter.heroku.com/articles/git)
+- [Deploy a FastAPI app on Render](https://render.com/docs/deploy-fastapi)
+- [Render Blueprint YAML reference](https://render.com/docs/blueprint-spec)
+- [Render Python version configuration](https://render.com/docs/python-version)
 - [Open-Meteo API](https://open-meteo.com/en/docs)
