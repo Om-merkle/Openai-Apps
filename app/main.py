@@ -143,9 +143,14 @@ async def connections(request: Request) -> dict[str, object]:
                 "purpose": "Platform entry point for broader OpenAI project management and integrations.",
             },
             {
+                "name": "Heroku application",
+                "url": settings.connect_base_url or "Set PUBLIC_BASE_URL to the Heroku app URL",
+                "purpose": "Primary public HTTPS host for the app and its MCP endpoint.",
+            },
+            {
                 "name": "Cloudflare public hostname",
-                "url": settings.cloudflare_public_url or "Not configured yet",
-                "purpose": "Optional public HTTPS endpoint for exposing this app without ngrok.",
+                "url": settings.cloudflare_public_url or "Not configured",
+                "purpose": "Optional alternative public HTTPS endpoint.",
             },
         ],
     }
@@ -153,11 +158,11 @@ async def connections(request: Request) -> dict[str, object]:
 
 @app.get("/integration-guide", tags=["meta"])
 async def integration_guide(request: Request) -> dict[str, object]:
-    """Return a machine-readable setup guide covering local, Cloudflare, and ChatGPT steps."""
+    """Return a machine-readable setup guide covering local, Heroku, and ChatGPT steps."""
     base_url = resolve_base_url(request)
     return {
         "app_name": settings.app_name,
-        "summary": "Step-by-step integration guide for local development, Cloudflare exposure, and ChatGPT connection.",
+        "summary": "Step-by-step integration guide for local development, Heroku deployment, and ChatGPT connection.",
         "steps": [
             {
                 "step": 1,
@@ -178,22 +183,31 @@ async def integration_guide(request: Request) -> dict[str, object]:
             },
             {
                 "step": 3,
-                "title": "Expose the app with Cloudflare",
-                "details": "Point a Cloudflare Tunnel hostname at http://127.0.0.1:8000 or your hosted app URL.",
-                "cloudflare_hostname": settings.cloudflare_public_url or "Set CLOUDFLARE_TUNNEL_HOSTNAME in .env",
+                "title": "Deploy the app to Heroku",
+                "details": "Create a Heroku app and deploy the repository. The Procfile binds Uvicorn to Heroku's PORT.",
+                "commands": [
+                    "heroku login",
+                    "heroku create YOUR_HEROKU_APP",
+                    "git push heroku main",
+                ],
             },
             {
                 "step": 4,
-                "title": "Connect ChatGPT",
-                "details": "Use the public HTTPS MCP endpoint in the ChatGPT connector flow.",
-                "chatgpt_connector_url": (
-                    f"{settings.cloudflare_public_url}/mcp"
-                    if settings.cloudflare_public_url
-                    else "https://your-public-url.example/mcp"
-                ),
+                "title": "Configure the public URL",
+                "details": "Set PUBLIC_BASE_URL to the exact HTTPS URL shown by Heroku, then redeploy or restart the app.",
+                "command": "heroku config:set PUBLIC_BASE_URL=https://YOUR_HEROKU_APP.herokuapp.com -a YOUR_HEROKU_APP",
+                "public_url": settings.connect_base_url or "https://YOUR_HEROKU_APP.herokuapp.com",
             },
             {
                 "step": 5,
+                "title": "Connect ChatGPT",
+                "details": "Use the public HTTPS MCP endpoint in the ChatGPT connector flow.",
+                "chatgpt_connector_url": f"{settings.connect_base_url.rstrip('/')}/mcp"
+                if settings.connect_base_url
+                else "https://YOUR_HEROKU_APP.herokuapp.com/mcp",
+            },
+            {
+                "step": 6,
                 "title": "Review OpenAI Apps references",
                 "details": "Use the official OpenAI Apps SDK docs and deployment docs while integrating.",
                 "links": [
